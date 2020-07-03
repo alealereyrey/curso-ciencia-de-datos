@@ -34,9 +34,9 @@ knitr::opts_chunk$set(echo = TRUE)
 
 Para la evaluación del desempeño profesional en un servicio de endoscopía digestiva existen ciertos indicadores que buscan reflejar la calidad de los procedimientos y procesos de la atención médica. El monitoreo y el análisis periódico de los mismos permite estimar el estado actual y elaborar medidas tendientes a la mejora constante en la calidad de atención.  
 
-Dentro de estos indicadores, la tasa de detección de pólipos y la tasa de detección de adenomas son medidas relevantes a la hora de evaluar la calidad de los estudios de rastreo y prevención del cáncer colorrectal. Estos indicadores surgen de la relación entre el número de polipos o adenomas detectados sobre el total de los estudios de rastreo realizados. 
+Dentro de estos indicadores, la tasa de detección de adenomas es la medida más relevante a la hora de evaluar la calidad de los estudios de rastreo y prevención del cáncer colorrectal. La tasa de detección de pólipos es un aproximativo de la misma que no requiere el resultado del análisis histopatológico para su cálculo. Ambos indicadores surgen de la relación entre el número de polipos o adenomas detectados sobre el total de los estudios de rastreo realizados. 
 
-Otra evaluación de calidad en endoscopía, también directamente relacionada con la prevención del cáncer colorrectal, es la preparación colónica para el estudio. La escala más utilizada para estimar la correcta preparación es la escala de Boston, la cual otorga un puntaje de 0 a 9, siendo 9 la preparación ideal. 
+Otras evaluaciones de calidad en endoscopía, también directamente relacionadas con la prevención del cáncer colorrectal, son la tasa de intubación cecal y la preparación colónica para el estudio. La tasa de intubación cecal es la proporción de estudios considerados completos sobre la totalidad de estudios. La preparación colónica se evalúa con escalas de puntuación. La más utilizada es la escala de Boston, la cual divide al colon en tres segmentos (colon ascendente, transverso y descentente) y otorga un puntaje de 0 a 3 a cada parte, siendo 9 la preparación ideal. Para ser considerada adecuada la preparación, el puntaje total debe ser mayor o igual a 6 y todos los segmentos deben recibir un puntaje de al menos 2. 
 
 >El objetivo general del trabajo es medir la tasa de detección de pólipos de un servicio de endoscopía digestiva en un hospital universitario de la Ciudad Autónoma de Buenos Aires. 
 
@@ -49,6 +49,8 @@ Otra evaluación de calidad en endoscopía, también directamente relacionada co
    . Investigar si existe asociación entre el número de procedimientos realizados y el número de pólipos detectados.
 
    . Investigar si existe asociación entre el número de procedimientos realizados y la tasa de detección de pólipos.
+   
+   . Calcular la tasa de estudios completos
 
    . Evaluar la calidad de la preparación de los estudios.
 
@@ -149,7 +151,7 @@ Hay algunos operadores que ciertas polipectomías no las registraron como tales 
 
 Paso todo el texto a mayúsculas. 
 
-Luego filtro los operadores que me interesan. 
+Luego filtro los operadores que me interesan y descarto algunas colonoscopías mal registradas. 
 
 ```{r, echo=TRUE, results= "hide"}
 vcc <- vcc %>%
@@ -180,7 +182,7 @@ vcc <- vcc %>%
                TipEs = if_else(TipEs == "O", "G", TipEs),
                PreparadoCon = if_else(PreparadoCon == "FOSFATOS", "PICOSULFATO", PreparadoCon)) %>%
          mutate_at(vars(which(sapply(., is.character))), str_to_upper) %>%
-         filter(Operador %in% c("A","B","C", "D", "E", "F", "G", "H"))
+         filter(Operador %in% c("A","B","C", "D", "E", "F", "G", "H") &!(TipEs == "C" & Colonoscopia == is.na(Colonoscopia)))
 
 head(vcc)
         
@@ -265,12 +267,7 @@ grafico_estudios_sede
 
 ```{r, echo=TRUE, results= "hide"}
 solo_vcc <- vcc %>%
-        filter(TipEs == "C" & Colonoscopia != is.na(Colonoscopia))
-
-solo_vcc1 <- vcc %>%
         filter(TipEs == "C")
-
-dif2 <- anti_join(solo_vcc1, solo_vcc)
 
 screening <- solo_vcc %>%
         filter(str_detect(Indicacion, regex("screening|vigilancia", ignore_case = T)) &! str_detect(Indicacion, regex("proctitis", ignore_case = T)))
@@ -446,6 +443,21 @@ grafico_modelado
 
 ```
 
+## Calculo la tasa de estudios completos
+
+Creo un data frame que filtre todos los estudios completos. Eso implica llegada a ciego, intubación del íleon o llegada hasta una anastomosis entre intestino delgado y colon remanente. Para esto itero varias veces sobre expresiones regulares hasta filtrar los estudios en los cuales se mencionan estas referencias. El anti join me permite crear una tabla que me muestra todo lo que excluí (los estudios incompletos). 
+
+Una vez hecho esto, divido el número de observaciones de la nueva tabla sobre las observaciones de la tabla con todas las colonoscopías y multiplico el resultado por 100, lo cual me da el porcentaje de estudios completos. 
+
+```{r echo=TRUE}
+intubacion_cecal <- solo_vcc %>%
+                filter(str_detect(Colonoscopia, regex("c(ie|ei)go|cecal|(i|í)leo|enter|ostom(i|í)a|aferente|pouch", ignore_case = T)))
+
+dif <- anti_join(solo_vcc, intubacion_cecal)
+
+tasa_intubacion <- (nrow(intubacion_cecal)/nrow(solo_vcc))*100
+tasa_intubacion
+```
 
 ## Analizo las preparaciones
  
@@ -616,17 +628,7 @@ grafico_dicotomico <- ggplot(df_grafico_dicotomico,
 grafico_dicotomico
 ```
 
-```{r}
 
-intubacion_cecal <- solo_vcc %>%
-                filter(str_detect(Colonoscopia, regex("c(ie|ei)go|cecal|(i|í)leo|enter|ostom(i|í)a|aferente|pouch", ignore_case = T)))
-                count()
-
-dif <- anti_join(solo_vcc, intubacion_cecal)
-
-tasa_intubacion <- (2836/2985)*100
-tasa_intubacion
-```
 
 
 # Descripción de los resultados obtenidos
@@ -635,22 +637,24 @@ En relación al objetivo primario, se observó una muy buena tasa de detección 
 
 Existe una correlación lineal muy fuerte entre el número de endoscopías y número de polipectomías realizadas (0.98), no así entre el número de endoscopías y la tasa de detección de pólipos (-0.18). 
 
-Se realizaron un total de 5324 estudios en 2018, estando distribuídos de manera similar en ambas sedes (2660 en Galván y 2664 en Las Heras). En la sede de Galván se realizaron 1466 colonoscopías, 1192 gastroscopías y 2 rectoscopías. En la sede de Las Heras se realizaron 1534 colonoscopías, 1128 gastroscopías y 2 rectoscopías.
+Se realizaron un total de 5309 estudios en 2018, estando distribuídos de manera similar en ambas sedes (2660 en Galván y 2664 en Las Heras). En la sede de Galván se realizaron 1466 colonoscopías, 1192 gastroscopías y 2 rectoscopías. En la sede de Las Heras se realizaron 1534 colonoscopías, 1128 gastroscopías y 2 rectoscopías.
 
-Del total de estudios, 3000 fueron colonoscopías. 2055 de estas fueron indicadas para prevención de cáncer colorrectal. En la sede de Galván se realizaron 1028 colonoscopías de rastreo. En 476 estudios se resecaron pólipos. En la sede de Las Heras se realizaron 1027 colonoscopías de rastreo. En 463 estudios se resecaron pólipos. 
+Del total de estudios, 2985 fueron colonoscopías. 2055 de estas fueron indicadas para prevención de cáncer colorrectal. En la sede de Galván se realizaron 1028 colonoscopías de rastreo. En 476 estudios se resecaron pólipos. En la sede de Las Heras se realizaron 1027 colonoscopías de rastreo. En 463 estudios se resecaron pólipos. 
+
+De las 2985 colonoscopías realizadas, en el 95% (2838) se logró realizar el estudio en forma completa. 
 
 En relación a la calidad de la preparación de los estudios, en el 88% fue adecuada, siendo la media de puntaje 6,88. En el 70,8% de los estudios la preparación utilizada fue etilenglicol, mientras que en el 29,2% se utilizó picosulfato. No se observó asociación entre el tipo de laxante y la calidad de la preparaión colónica. 
 
 
 # Conclusiones
 
-En este trabajo se analizaron algunos indicadores de calidad de endoscopía digestiva en un hospital universitario de alta complejidad. Se observó que la tasa de detección de pólipos del servicio en general y de cada endoscopista en particular está significativamente por encima de los estándares mínimos recomendados. Se evidenció asimismo, que el número de estudios en los cuales se detectan pólipos está asociado en forma lineal con el número de estudios realizados, lo cual es esperable si la calidad de las endoscopías es buena. No se observó asociación entre el número de endoscopías realizadas y la tasa de detección de pólipos. La cantidad y tipo de estudios realizados fue similiar en ambas sedes. 
+En este trabajo se analizaron algunos indicadores de calidad de endoscopía digestiva en un hospital universitario de alta complejidad. Se observó que la tasa de detección de pólipos del servicio en general y de cada endoscopista en particular está significativamente por encima de los estándares mínimos recomendados. Se evidenció asimismo, que el número de estudios en los cuales se detectan pólipos está asociado en forma lineal con el número de estudios realizados, lo cual es esperable si la calidad de las endoscopías es buena. No se observó asociación entre el número de endoscopías realizadas y la tasa de detección de pólipos. La cantidad y tipo de estudios realizados fue similiar en ambas sedes. El porcentaje de estudios completos fue satisfactorio.
 
 Con respecto a la preparación colónica, se observó una limpieza adecuada en el 88% de los estudios sin hallarse diferencias estadísticamente significativas en relación al laxante utilizado. El estándar recomendado de limpieza adecuada varía entre el 85% y el 90%, siendo este último el deseado para las colonoscopias de cribado. Los resultados observados están dentro de lo esperado, aunque se deberían implementar modificaciones para lograr el 90% recomendado para estudios de rastreo. 
 
 
 # Posibles análisis futuros sobre el tema
 
-El cálculo de la tasa de detección de adenomas, otro indicador de calidad en endoscopía digestiva, resulta del cotejamiento de las polipectomias con el resultado anatomopatológico. Al discernir entre lesiones pre malignas y lesiones sin riesgo de malignización, este indicador nos permite inferir con mayor grado de exactitud la eficacia en la prevención del cáncer colorrectal. Sería útil en futuros análisis contar con el resultado anatomopatológico de los pólipos resecados, para poder así calcular la tasa de detección de adenomas. 
+El cálculo de la tasa de detección de adenomas, otro indicador de calidad en endoscopía digestiva, resulta del cotejamiento de las polipectomias con el resultado anatomopatológico. Al discernir entre lesiones pre malignas y lesiones sin riesgo de malignización, este indicador nos permite inferir con mayor grado de exactitud la eficacia en la prevención del cáncer colorrectal. Sería útil en futuros análisis contar con el resultado histopatológico de los pólipos resecados, para poder así calcular la tasa de detección de adenomas. 
 
-En relación a la preparación colónica, en futuros análisis se podría evaluar si existieron diferencias en la calidad de la preparación según el horario del estudio. Dado que las indicaciones para realizar la toma del laxante son relativamente estandarizadas, cabe la posibilidad que existan diferencias en la limpieza según el horario en que se realizó el procedimiento. En caso de observarse dichas diferencias, la simple corrección del horario de la toma del laxante podría ser suficiente para lograr el 90% de preparaciones adecuadas necesarias para los estudios de rastreo.
+En relación a la preparación colónica, sería útil en un análisis futuro contar con el registro de la preparación por sectores, lo cual permitiría evaluar la correcta limpieza de cada segmento colónico. Por otro lado, contando con el horario del estudio, se podría evaluar si existieron diferencias en la calidad de la preparación en relación con el mismo. Dado que las indicaciones para realizar la toma del laxante son relativamente estandarizadas, cabe la posibilidad que existan diferencias en la limpieza según el horario en que se realizó el procedimiento. En caso de observarse dichas diferencias, la simple adecuación del horario de la toma del laxante podría ser suficiente para lograr el 90% de preparaciones adecuadas necesarias para los estudios de rastreo.
