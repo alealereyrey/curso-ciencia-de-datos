@@ -128,9 +128,8 @@ Luego uno esa tabla a la original descartando la columna "Dirección" para que n
 vcc_geo <- USIG_geocode(c("AV GRAL LAS HERAS 2900","GALVAN 4105"))
 
 vcc <- cbind(vcc, vcc_geo) %>%
-        select(-Direccion)
-
-names(vcc)[20] <- paste("Sede")    
+        select(-Direccion) %>%
+        rename(Sede = address_normalised)
 
 glimpse(vcc)
 
