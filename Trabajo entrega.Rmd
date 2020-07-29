@@ -1,5 +1,5 @@
 ---
-title: "**Trabajo final para el curso de ciencia de datos UBA**"
+title: "**Ciencia de datos aplicada a endoscopía digestiva**"
 author: "Alejandro Rey"
 date: "*Julio 2020*"
 output: 
@@ -360,7 +360,8 @@ tabla_deteccion <- terapeutica_operador %>%
                         left_join(polipecto_operador, by = c("Operador" = "Operador", "Terapeutica" = "Terapeutica")) %>%
                         group_by(Operador) %>%
                                   summarise(Estudios = sum(n.x), Polipectomias = sum(n.y, na.rm = T), 
-                                            Tasa = round((Polipectomias/Estudios)*100, 1))
+                                            Tasa = round((Polipectomias/Estudios)*100, 1)) %>%
+        ungroup()
 
 mean(polipecto_operador$n)
 mean(tabla_deteccion$Tasa)
@@ -391,7 +392,7 @@ grafico_tasa
 ```
 
 
-## Hago dos nuevos gráficos: uno del número de polipectomías en función del número de estudios de rastreo y otro de la tasa de detección (en %) en función de número de estudios de rastreo
+## Hago dos nuevos gráficos: uno del número de polipectomías en función del número de estudios de rastreo y otro de la tasa de detección en función del total de estudios de rastreo
 
 ```{r echo=TRUE}
 grafico_polipos_estudios <- ggplot(tabla_deteccion,
