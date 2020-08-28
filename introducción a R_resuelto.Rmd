@@ -1,0 +1,349 @@
+---
+title: "Introduccion a R - codigo"
+author: "nombre de alumne"
+date: "6 de abril de 2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+##¿Como instalar una biblioteca?
+
+Las bibliotecas son paquetes de funciones creados por la comunidad R que se encuentran disponibles para su uso. Tienen la ventaja de tener actualizacciones frecuentes.
+
+
+```{r}
+#Funcion para instalar bibliotecas
+
+install.packages("tidyverse")
+
+install.packages("readxl")
+
+install.packages("gapminder")
+
+```
+
+
+##¿Como ejecutar una biblioteca?
+
+Una vez instaladas las bibliotecas o paquetes de funciones, siempre que empecemos un script o rmarkdown lo primero que vamos a hacer es llamar a las bibliotecas que vamos a a utilizar en el editor de codigo.
+
+```{r}
+library(tidyverse)
+library(readxl)
+library(gapminder)
+
+```
+
+
+##Socorro!!
+
+A veces podemos no saber para que sirve la bibioteca que estamos instalando o que funciones para eso R nos brinda apoyo con la funcion **help()**
+
+Veamos como funciona:
+
+```{r}
+
+help("tidyverse")
+
+?tidyverse
+```
+
+
+##¿Que objetos puedo usar en R?
+
+Cuando trabajamos en R, las variables, datos, funciones y resultados se guardan en la memoria activa de la computadora en forma de *objetos* que tienen *nombres*.
+
+Se pueden realizar acciones con esos objetos con operadores aritmeticos, logicos, de comparacion y funciones.
+
+En R el simbolo "<-" equivale a "=", o sea, si yo quisiera asignarle nombres a objetos, vamos a escribirlo de la siguiente manera:
+
+
+Probemos:
+
+```{r}
+
+objeto_1 <- "aprendiendo R"
+
+objeto_1
+```
+
+
+```{r}
+objeto_2 <- 25
+
+objeto_2
+```
+
+
+A continuacion describimos los tipos de datos:
+
+```{r}
+
+num <- 15
+
+num
+```
+
+```{r}
+
+cara <- "aprendiendo R"
+
+cara
+
+```
+
+```{r}
+integ <- -15
+
+integ
+```
+
+```{r}
+lo <- TRUE
+
+lo
+```
+
+##Vectores
+
+El *vector* es un elemento unidimensional y que al ingresar datos en el se convierten en un unico tipo de dato (num, char o log).
+
+En R se utiliza la funcion c() para concatenar valores y, asi crear un vector.
+
+Probemos:
+
+```{r}
+
+vector_num <- c(15, 10, 15, 13, 14, 11)
+
+vector_num
+```
+
+```{r}
+vector_char <- c("F", "M", "M", "F", "M", "M")
+
+vector_char
+```
+
+
+##Matriz
+
+A diferencia del vector, la *matriz* incorpora dimensiones, ya no voy a tener una unica dimension (fila).
+
+Veamos en R:
+
+```{r}
+
+mat <- matrix(1:30, nrow = 6, ncol = 5)
+
+mat
+```
+
+
+##Lista
+
+Una *lista* es un conjunto de objetos que se encuentran ordenados y pueden ser distintos.
+
+Probemos:
+```{r}
+nombres <- c("Marina", "Victoria", "Antonio","Micaela", "Elian", "Ivan", "Carla", "Julieta")
+
+genero <- c("F","M","T", "NB")
+
+altura <- c(1.7, 1.60, 1.80, 1.63, 1.79, 1.75, 1.59, 1.61)
+
+lista <- list(nombres, genero, altura)
+
+lista
+```
+
+
+##DataFrame
+
+Por ultimo, vamos a ve que es el *dataframe*, podriamos decir que es como las bases de datos que conocen, puede tener objetos que sean de distinto tipo y contengan distinto tipo de datos, pero deberan tener la misma cantidad de observaciones.
+
+Vamos aprovechar este tipo de objeto y usar la biblioteca gapminder, la cual uds ya instalaron y llamaron anteriormente.
+
+```{r}
+
+exp_vida_pais <- gapminder
+
+
+```
+
+```{r}
+
+head(exp_vida_pais, n = 5)
+
+```
+
+##¿Como se que tipo datos tiene mi objeto?
+
+R nos permtite saber a través del uso de dos funciones *class()* y *typeof()*.
+
+Usemoslas:
+
+```{r echo=TRUE, eval=TRUE}
+
+class(altura)
+
+typeof(altura)
+
+class(lo)
+
+typeof(lo)
+
+class(nombres)
+
+typeof(nombres)
+
+```
+
+
+##¿Como modificar el tipo de objeto?
+
+Puede ocurrir que al importar una base por defecto me traiga las variables como character y son numericas, o puede ocurrir que necesite cambiar el tipo de variable.
+
+Para eso existe una R una forma de hacerlo, probemos:
+
+```{r echo=TRUE, eval=TRUE}
+vector_num1 <- as.character(as.numeric(vector_num))
+
+vector_num1
+
+class(vector_num1)
+
+genero1 <- as.logical(as.character(genero))
+
+genero1
+
+class(genero1)
+
+```
+
+
+##Operadores
+
+Les presentamos los simbolos para los operadores que van a poder usar en R para operaciones aritmeticas, de comparacion y logicas.
+
+Operacion     |Simbolo        | Tipo de operacion
+--------------|---------------|-------------------
+suma          |      +        | aritmetica
+resta         |      -        | aritmetica
+multiplicacion|      *        | aritmetica
+division      |      /        | aritmetica
+potencia      |      ^        | aritmetica
+igual         |      ==       | comparacion
+menor         |      <        | comparacion
+menor e igual |      <=       | comparacion
+mayor         |      >        | comparacion
+mayor e igual |      >=       | comparacion
+distinto      |      !=       | comparacion
+O             |     \|\       | logica
+Y             |      &        | logica
+
+
+```{r echo=TRUE, eval=TRUE}
+
+altura2 <- altura/2
+
+altura2
+
+altura3 <- altura >= 1.60
+
+altura3
+
+```
+
+
+##Guardar y abrir bases de datos en R
+
+###¿como guardo una base de datos en R?
+
+
+```{r}
+
+write.csv2(exp_vida_pais,"Documents/gapminder.csv")
+
+write_xlsx(exp_vida_pais,"Documents/gapminder.xlsx", col_names = TRUE)
+
+```
+
+Para usar la funcion write_xlsx deberan instalarse la biblioteca writexl.
+
+
+###¿Como abrir una base de datos en R?
+
+
+```{r}
+exp_vida_pais2 <- read.csv2(file= "Documents/gapminder.csv", sep = ";")
+
+exp_vida_pais3 <- read_delim(file= "Documents/gapminder.csv", delim = ";")
+
+```
+
+```{r}
+exp_vida_pais4 <- read_excel(path = "Documents/gapminder.xlsx")
+
+```
+
+Para usar la funcion write.xlsx deberan instalar la biblioteca "readxl"
+
+
+##Bonus Track 
+
+
+```{r}
+
+qplot(gdpPercap, lifeExp, data = exp_vida_pais)
+
+```
+
+
+#Proxima Clase
+
+En la proxima clase vamos a trabajar con **Tidyverse**. 
+
+Esta biblioteca no es solamente un conjunto de funciones sino que es una forma de codear. 
+
+Implica una misma forma de genera y leer las bases de datos. 
+
+A modo de adelanto les dejamos algunas funciones que suelen ser muy utiles para caracterizar bases de datos de una manera rapida y eficiente.
+
+**names()** muestra los nombres de las variables de la base u objeto con el que estamos trabajado.
+
+```{r}
+names(exp_vida_pais)
+
+```
+
+
+**head()** devuelve el contenido las n filas que uno indique de las variables de nuestra base.
+
+```{r}
+
+head(exp_vida_pais, n = 3)
+
+```
+
+
+
+
+```{r}
+
+str(exp_vida_pais)
+
+```
+
+
+
+```{r}
+
+summary(exp_vida_pais)
+
+```
+

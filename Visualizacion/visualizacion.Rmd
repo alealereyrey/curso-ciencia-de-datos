@@ -1,0 +1,361 @@
+---
+title: "Introduccion a visualizaciones en R"
+author: "Elian Bourdin - Micaela Zapata"
+date: "29/04/2020"
+output: 
+  html_document:
+    css: ../style.css 
+    fig_height: 8
+    fig_width: 12
+    #code_folding: "hide"
+    toc: true
+    toc_float:
+      toc_collapsed: true
+    toc_depth: 3
+    number_sections: true
+    theme: paper
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Introducción
+
+Por lo general, siempre que arribamos a un resultado que **comunicar** es porque ya atravesamos las trabajosas instancias de **exploración** o **investigación** sobre los datos. Usualmente una pregunta nos guía en el proceso. Estas etapas son muy importantes y nos pueden requerir el uso diversos gráficos.  
+
+Ya compartimos algunas herramientas que sería bueno tener en cuenta para el armado de visualizaciones. Contamos algunas buenas prácticas y consejos que nos van a permitir comunicar mejor nuestros resultados y es un tema que vamos a retomar más adelante.  
+
+También presentamos una - pero no la única - de las librerías más reconocidas y utilizadas como es "ggplot". Como vimos, esta librería nos da la posibilidad de ejecutar diferentes tipos de gráficos y utiliza una gramática específica bajo la lógica de capas. Nosotrxs ya instalamos ggplot por medio del paquete Tidyverse.  
+Si la llegáramos a necesitar, como siempre, nuestro comando para instalación es:  
+install.packages("ggplot2")
+
+Una vez instalada, la "llamamos" y la dejamos disponible por medio de la función library() 
+
+Usemos una base conocida para empezar a hacer algunos ejercicios con nuestras propias manos...
+
+```{r Cargo librerias, echo=TRUE, message=FALSE}
+summalibrary(tidyverse)
+library(gapminder)
+library(ggplot2)
+```
+
+# Algunos gráficos en pocas líneas con ggplot()
+
+Más adelante vamos a complejizar los gráficos, por ahora vamos a que también se pueden armar visualizaciones con pocas líneas de código. Veamos un ejemplo de gráfico básico.  
+Primero preparemos la información con alguna de las funciones que vimos en Tidyverse y una base que conocemos: gapminder    
+
+```{r Preparamos el dataframe, echo=TRUE, message=FALSE}
+gapminder <- gapminder
+datos_pbi_argentina <- gapminder %>% 
+  filter(country == "Argentina") %>% 
+  rename("anio" = "year") %>% #Renombrando variables a gusto
+  rename("pbipercap" = "gdpPercap")
+```
+
+Ahora sí, generemos un primer gráfico, para estudiar la sintaxis básica de ggplot:
+
+```{r Creamos un gráfico, echo=TRUE, message=FALSE}
+grafico_pbi_arg <- ggplot(data = datos_pbi_argentina, 
+                          aes(x = anio, 
+                          y = pbipercap)) +
+                   geom_point()
+
+#si queremos agregar una nueva capa, también podemos hacerlo... que pasa si escribimos + geom_line()
+
+grafico_pbi_arg # Repetimos el nombre de nuestro gráfico para visualizarlo!
+```
+
+Y podemos agregar color:
+
+```{r Agregamos color, echo=TRUE, message=FALSE}
+
+grafico_pbi_arg_2 <- ggplot(data = datos_pbi_argentina,
+                            aes(x = anio, 
+                                y = pbipercap, 
+                                colour = anio > 1980)) +
+                     geom_point()
+
+grafico_pbi_arg_2
+
+#Si queremos sumar algo DE los datos, lo incorporamos DENTRO del aes(). Si queremos setear cosas AL gráfico lo ponemos FUERA del aes().
+```
+
+
+# Coyuntura...¿o qué!?
+
+Ya conocemos la lógica en el funcionamiento básico de **ggplot()** y un poco de la sintaxis, ahora vamos a ponernos manos a la obra con un set de datos completamente nuevo, ayudados de nuestra nueva herramienta.
+
+El set de datos que les traemos contiene los últimos datos públicos sobre *COVID-19*, con una actualización diaria de la curva epidemiológica y la distribución geográfica global.
+Todos los días, un grupo de epidemiólogos perteneciente al ECDC (Centro Europeo para la Prevención y Control de Enfermedades) examina las fuentes relevantes provenientes de las principales autoridades sanitarias de todos los países, para recopilar y actualizar las cifras.  
+
+```{r Llamamos a nuestra nueva base, echo=TRUE, message=FALSE}
+#Cargamos el set de datos
+coronavirus <- read.csv2(file = "C:/Users/Elian/OneDrive/Escritorio/Ciencia de datos en salud/2020/COVID-19-geographic-disbtribution-worldwide.csv", 
+                         sep = ",", 
+                         encoding = "UTF-8")
+#Pueden notar que en esta ocasión, el separador de campos es distinto al que veníamos utilizando en los anteriores csv. Ahora utilizaremos la ","
+```
+
+**Todo comienza entendiendo los datos con los que estamos trabajando**
+
+```{r Previsualizamos como se conforma, echo=TRUE, message=FALSE}
+head (coronavirus)
+summary(coronavirus)
+```
+
+Los datos que tenemos son suficientes para responder varias preguntas.
+A lo largo de toda la clase nos vamos a guiar por un proceso exploratorio de los datos, con el fin de responder preguntas básicas que nos permitan entender la información que estamos manejando.
+
+Nuestro objetivo final es **analizar el comportamiento del contagio/muerte en lo que va del año 2020, en todos los continentes.**  
+
+Primero preparemos la tabla. En función de nuestra pregunta o intención de análisis vamos a fitrar el período de tiempo que queremos ver (meses del 2020) y quedarnos con los datos de cada contintente.  
+
+```{r Manipulamos la tabla, echo=TRUE, message=FALSE}
+#Seleccionamos los campos que necesitamos y filtramos los primeros meses del 2020
+
+coronavirus_filtrado <- coronavirus %>% 
+                        select(day, month, year, cases, deaths, countriesAndTerritories, continentExp) %>% 
+                        filter(month %in% c(1,2,3,4) & continentExp != 'Other')
+```
+
+Veamos si nuestros filtros surtieron efecto:
+
+```{r Revisamos el resultado, echo=TRUE, message=FALSE}
+head(coronavirus_filtrado)
+summary(coronavirus_filtrado)
+```
+
+# De lleno a ggplot()
+
+La exploración de las variables no nos dio demasiada ayuda sobre la disposición de nuestros datos. Vamos a hacer una exploración visual para entender un poco mejor... Empecemos con algo básico: ¿Qué país tiene la mayor cantidad de muertes por COVID19?  
+ 
+Les proponemos empezar por una visualización simple, el **scatterplot** (o gráfico de dispersión). Es una visualización muy simple, que seguramente todxs conocen. Consiste en puntos que se proyectan en un eje de coordenadas x e y. Cada observación será representada con un punto. 
+
+Filtremos primero el set de datos con algunos de los verbos que aprendimos en la clase anterior. La idea es tener un dataframe simple, que agrupe las muertes por continente y país.  
+
+```{r Tabla muertes por pais, echo=TRUE, message=FALSE}
+muertes_x_pais <- coronavirus_filtrado %>% 
+                          group_by(countriesAndTerritories, continentExp) %>% 
+                          summarise (muertes = sum(deaths))
+summary(muertes_x_pais)
+```
+
+**Visualizando**
+
+Veamos que sucede si exploramos las muertes por país.
+Recuerden que primero se debe declarar el data.frame con el que queremos trabajar y luego agregamos una o más capas con las que representaremos la información. En este caso, la capa scatterplot se agrega con geom_point()  
+
+```{r Grafico muertes por pais, echo=TRUE, message=FALSE}
+ggplot(data = muertes_x_pais, aes(x=countriesAndTerritories, y=muertes)) +
+      geom_point()
+```
+
+**Un momento... ¿Qué está sucediendo?**
+
+Lo que hicimos fue darle la instrucción a ggplot que dibuje un punto por cada país (en el eje x), según la cantidad de muertes indicadas en el set de datos (eje y); representadas a través de las referencias estéticas, que se encuentran dentro de la función aes().
+
+**Pero... no se entiende mucho, verdad?**
+
+El problema en este caso es que tenemos más de 200 países diferentes en nuestro set de datos!! Entonces ¿Cómo vamos a identificar los puntos en la gráfica que contienen mayor cantidad de muertes?  
+
+Empecemos por algo básico, tratemos de identificar en una primera instancia ¿cuál es el continente al que pertenecen los valores fuera de norma?  
+
+Sabemos que solo tenemos 5 valores posibles de la categoría "Continente", por lo tanto podríamos intentar agregarle **atributos de color** para identificarlos rápidamente. Lo que vamos a incorporar es una tercera variable de información por medio del color.    
+
+```{r Agregamos atributos, echo=TRUE, message=FALSE}
+ggplot(data = muertes_x_pais, aes(x=countriesAndTerritories, y=muertes)) +
+       geom_point(aes(color = continentExp))
+
+##Quieren probar una variante? Pueden hacer algo similar con un atributo diferente... las formas!
+ggplot(data = muertes_x_pais, aes(x=countriesAndTerritories, y=muertes)) +
+  geom_point(aes(shape = continentExp))
+```
+
+Ya sabemos que los países que más fallecidos tienen, pertenecen a Europa y América y que existe una gran diferencia con el resto.  
+
+Pero...seguimos sin responder a nuestra primera pregunta! Tendríamos que generar un gráfico diferente que nos permita discernir con exactitud cuáles son los valores que claramente están fuera de rango. 
+
+Hay un gráfico alternativo al scatterplot que funciona de una manera bastante parecida...en vez de dibujar puntos...por qué no dibujamos **etiquetas**?
+
+```{r Uso de etiquetas, echo=TRUE, message=FALSE}
+ggplot(data = muertes_x_pais, aes(x=countriesAndTerritories, y=muertes)) +
+      geom_label(aes(label = countriesAndTerritories))
+```
+
+Finalmente! Encontramos el país que tiene mayor cantidad de muertes! Pero... no les llama la atención la gran diferencia de muertes que hay con el resto? Qué está pasando en el resto del continente? Vamos a verlo...
+
+Vamos a filtrar el set de datos y ver que sucede:  
+
+```{r Tabla America, echo=TRUE, message=FALSE}
+coronavirus_america <- coronavirus_filtrado %>% 
+                       filter(continentExp == 'America') 
+```
+
+Ya dominamos un poco el scatterplot, que tal si probamos cambiando la visualización?
+Los gráficos de barras (o bar chart) son muy populares y se usan frecuentemente para comparaciones.
+Vamos a comparar la suma total de muertes de los países de América. Los gráficos de barra se realizan con **geom_bar()**. Los parámetros que se definen dentro de los atributos estéticos son *x*, donde habitualmente colocamos variables categóricas y el segundo parámetro es *weight*, que indicará la variable a sumar (y  determina la altura de las barras).  
+Si no se especifica la variable *weight*, la función se limitará a hacer la cuenta de cuantas veces aparece la categoría en el dataframe (es decir, contabilizará su frecuencia de aparición), lo cual no sería demasiado útil para nuestro análisis y es una clase de error que puede traer muchas confusiones en nuestros análisis.  
+
+```{r Grafico de columnas, echo=TRUE, message=FALSE}
+ggplot(coronavirus_america, aes(x=countriesAndTerritories, weight=deaths)) + 
+       geom_bar()
+```
+
+Seguimos con un problema de visualización...hay demasiadas categorías de la variable país y no tenemos el espacio suficiente para representarlas. 
+Tal vez podríamos probar invirtiendo los ejes!! Para eso, podemos usar **coord_flip**  
+
+```{r Grafico de barras, echo=TRUE, message=FALSE}
+##vamos a cambiar de orden los ejes, para ver si podemos ver mejor el gráfico!
+ggplot(coronavirus_america ) + 
+  geom_bar(aes(x=countriesAndTerritories, weight=deaths)) +
+  coord_flip()
+```
+
+Sin embargo, hay algo que sigue resultando incómodo de visualizar! Tal vez deberíamos probar de reordenar el gráfico:  
+
+```{r Usamos reorder(), echo=TRUE, message=FALSE}
+ggplot(coronavirus_america ) + 
+       geom_bar(aes(x= reorder(countriesAndTerritories, deathssys), weight=deaths)) +
+       coord_flip() 
+```
+
+Como vemos, *reorder* es una función genérica que por "default" trata su primer argumento como una variable categórica y reordena sus niveles basados en una variable numérica.  
+
+Ya exploramos bastante el set de datos y encontramos muchas cosas interesantes a través de las visualizaciones. Este sería un buen momento para volver a nuestro objetivo principal: analizar el comportamiento del contagio/muerte a lo largo del año 2020 en todos los continentes.  
+
+Empecemos por adaptar los datos a nuestras necesidades.  
+
+```{r Tabla por continente, echo=TRUE, message=FALSE}
+coronavirus_agrupado <- coronavirus_filtrado %>% 
+                        mutate (month = as.character(as.factor(month))) %>% 
+                        group_by(countriesAndTerritories, continentExp, month) %>%
+                        summarise (muertes = sum(deaths),
+                                   casos = sum (cases))
+```
+
+**Visualicemos!**  
+
+```{r Grafico de puntos por contintente, echo=TRUE, message=FALSE}
+ggplot(data = coronavirus_agrupado, aes(x=casos, y=muertes)) +
+       geom_point(aes(color = continentExp))
+```
+
+A nuestra visualización le faltan datos para alcanzar nuestro objetivo... ¿de qué manera podríamos agregar a nuestros gráficos el comportamiento mensual de la pandemia?  
+Tal vez el facetado es nuestra respuesta...  
+
+# Facetado...vayamos por partes
+
+Hasta el momento hemos inspeccionado diferentes gráficos y aplicamos múltiples atributos estéticos. El facetado es muy interesante porque nos permite mostrar más variables en un plano bidimensional. A medida de que vamos agregando atributos para codificar distintas variables la gráfica se complejiza y se hace muy difícil de leer. 
+Las facetas son múltiples gráficos contiguos donde cada uno mostrará un subconjunto de datos que nosotros definiremos. La separación conserva exactamente el mismo gráfico para cada caso, con iguales escalas y referencias, lo que cambia es el contenido de los datos. Habitualmente son interesantes para variables categóricas, pero su uso es muy diverso.  
+
+Un dato importante a tener en cuenta: la variable a facetar, siempre se escribe con el signo **~**.  
+
+Entonces, vamos a aplicar facetado, sobre los meses!  
+
+```{r Grafico facetado, echo=TRUE, message=FALSE}
+ggplot(data = coronavirus_agrupado, aes(x=casos, y=muertes)) +
+       geom_point(aes(color = continentExp)) +
+       facet_wrap(~month) #Vean que asignó esta variable como título de cada gráfico...por ahora, que sea así
+```
+
+# Escala
+
+Esto va mucho mejor! Ahora podemos ver que el comportamiento de la pandemia a lo largo de los meses fue muy diferente... principalmente que los valores comenzaron a dispararse a partir del mes de marzo y que claramente el continente más afectado es América, pero nos dimos cuenta que este valor está fuertemente influenciado por EEUU!!! Y sobre todo que la evolución entre marzo y abril fue increíblemente rápida!!!  
+
+Sin embargo, todavía hay algo que podemos mejorar en nuestra gráfica... La escala que estamos utilizando...¿no les dificulta la visualización?  
+Que tal si aplicamos escala logarítmica a nuestras variables?  
+
+```{r Escala logaritmica, echo=TRUE, message=FALSE}
+ggplot(data = coronavirus_agrupado, aes(x=casos, y=muertes)) +
+       geom_point(size = 2, aes(color = continentExp)) +
+       scale_x_log10() +     
+       facet_wrap(~month) 
+       
+
+```
+
+# Referencias para gráficos más completos
+
+Ya logramos el objetivo que nos habíamos planteado. Exploramos todo el set de datos, respondiéndonos una serie de preguntas hasta llegar a saber el comportamiento de la pandemia a lo largo de los meses del año 2020 en cada uno de los continentes.  
+
+El próximo paso es que la información quede correctamente detallada para que pueda ser interpretada por otras personas. En este punto, hemos pasado del ámbito de la exploración a la comunicación de los resultados, donde la claridad es fundamental, tal como lo vimos en la introducción del encuentro.  
+
+Los elementos con los que necesita contar un gráfico son: **título descriptivo**, **etiquetas en los ejes** y **nombres de las leyendas**.  
+
+```{r Referencias, echo=TRUE, message=FALSE}
+ggplot(data = coronavirus_agrupado, aes(x=casos, y=muertes)) +
+       geom_point(size = 2, aes(color = continentExp)) +
+       scale_x_log10() +
+       facet_wrap(~month) +
+       labs(title = "Evolución de casos/muertes COVID19",
+               x = "Casos",
+               y = "Muertes",
+               color = "Continente")
+```
+
+Pero todavía nos falta un poco de información. ¿No deberíamos citar la **fuente de datos**? Y sería buena idea especificar la **fecha de nuestro análisis**.  
+
+Podemos agregar además un **subtítulo** y una nota al pie del gráfico.  
+
+```{r Fuente y fecha, echo=TRUE, message=FALSE}
+ggplot (data = coronavirus_agrupado, aes(x=casos, y=muertes)) +
+        geom_point(size = 2, aes(color = continentExp)) +
+        scale_x_log10() +
+        facet_wrap(~month) +
+        labs(title = "Evolución de casos/muertes COVID19",
+             subtitle = "Fecha de análisis: 29/03/2020",
+             x = "Casos",
+             y = "Muertes",
+             color = "Continente",
+             caption = "Fuente de datos: https://data.europa.eu/euodp/en/data/dataset/covid-19-coronavirus-data")
+```
+
+# Bonus
+
+Quieren darle un aspecto un poco diferente a sus gráficos? Pueden probar utilizando temas. Es muy simple, se agregan simplemente como una capa más.  
+
+```{r Temas, echo=TRUE, message=FALSE}
+ggplot (data = coronavirus_agrupado, aes(x=casos, y=muertes)) +
+        geom_point(size = 2, aes(color = continentExp)) +
+        scale_x_log10() +
+        facet_wrap(~month) +
+        labs ( title = "Evolución de casos/muertes COVID19",
+               subtitle = "Fecha de análisis: 29/03/2020",
+               x = "Casos",
+               y = "Muertes",
+               color = "Continente",
+               caption = "Fuente de datos: https://data.europa.eu/euodp/en/data/dataset/covid-19-coronavirus-data") +
+        theme_()
+```
+
+Como si esto no fuera poco, pueden agregar más temas instalando otras librerías!
+install.packages("ggthemes")  
+
+```{r Ggthemes, echo=TRUE, message=FALSE}
+library(ggthemes)
+```
+
+Veamos alguno de los temas descargados.  
+
+```{r Ggthemes ejemplo, echo=TRUE, message=FALSE}
+ggplot (data = coronavirus_agrupado, aes(x=casos, y=muertes)) +
+        geom_point(size = 2, aes(color = continentExp)) +
+        scale_x_log10() +
+        facet_wrap(~month) +
+        labs ( title = "Evolución de casos/muertes COVID19",
+               subtitle = "Fecha de análisis: 29/03/2020",
+               x = "Casos",
+               y = "Muertes",
+               color = "Continente",
+               caption = "Fuente de datos: https://data.europa.eu/euodp/en/data/dataset/covid-19-coronavirus-data") +
+        theme_dark()
+```
+
+También pueden dar un vistazo al sitio <https://www.data-to-viz.com/>. Es un sitio que contiene muchas visualizaciones, con su respectivo código en R, para que puedan copiar gráficos parecidos.  
+
+Y por último, siempre es recomendable revisar el **cheatsheet** de ggplot, en el link que les dejamos la clase pasada.  
+
+<https://rstudio.com/resources/cheatsheets/>  

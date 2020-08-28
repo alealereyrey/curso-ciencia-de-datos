@@ -1,0 +1,196 @@
+---
+title: "Untitled"
+author: "nombre del alumne"
+date: "15 de abril de 2020"
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r}
+library(tidyverse)
+library(readxl)
+library(writexl)
+library(gapminder)
+
+exp_vida_pais <- gapminder
+```
+
+
+###**Explorando Bases de Datos**
+
+####**Name()**
+
+**names()** muestra los nombres de las variables de la base u objeto con el que estamos trabajado.
+
+```{r }
+names(exp_vida_pais)
+
+```
+
+
+####**Head()**
+
+**head()** devuelve el contenido las n filas que uno indique de las variables de nuestra base.
+
+```{r }
+
+head(exp_vida_pais, n = 3)
+
+```
+
+
+####**Srt()**
+
+**str()** indica nombre y tipo de variables que tenemos en nuestra base.
+
+```{r }
+
+str(exp_vida_pais)
+
+```
+
+
+####**Summary()**
+
+**summary()** devuelve indicadores resumenes del estilo media, mediana, minima, maxima total y para cada variable numerica.
+
+```{r }
+
+summary(exp_vida_pais)
+
+```
+
+
+
+###**Tidyverse y sus verbos**
+
+
+####**Select**
+
+***Select()*** te permite seleccionar rápidamente un subconjunto útil utilizando operaciones basadas en los nombres de las variables.
+
+Probemos!
+
+
+```{r }
+
+exp_vida_cont <- select(exp_vida_pais, 
+                        continent,
+                        year,
+                        lifeExp,
+                        gdpPercap)
+
+```
+
+
+####**Filter**
+
+***Filter()*** te permite filtrar un subconjunto de observaciones según sus valores. El primer argumento es el nombre del data frame. El segundo y los siguientes argumentos son las expresiones que lo filtran.
+
+
+
+```{r }
+
+exp_vida_paises_nordicos <- filter(exp_vida_pais,
+                                   country == "Finland" | country == "Denmark" | country == "Netherlands" |  country == "Norway" | country == "Sweden")
+
+```
+
+
+Una manera rapida y util para resolver este problema es x ***%in%*** y (es decir, x en y). Esto seleccionara a cada fila donde x es uno de los valores en y.
+
+
+```{r }
+
+nordicos <- c("Finland", "Denmark", "Netherlands", "Norway", "Sweden")
+
+exp_vida_paises_nordicos1 <- filter(exp_vida_pais, country %in% nordicos)
+
+str(exp_vida_paises_nordicos1)
+
+
+exp_vida_paises_nordicos <- filter(exp_vida_pais, country %in% c("Finland", "Denmark", "Netherlands", "Norway", "Sweden"))
+
+?filter
+
+```
+
+
+####**Mutate**
+
+Suele ser útil crear nuevas columnas en función de columnas existentes. Ese es el trabajo de ***mutate()***. Siempre que usemos esta función, la nueva variable sera agregada como nueva columna al final de un conjunto de datos.
+
+Veamos!
+
+
+```{r }
+
+exp_vida_cont <- mutate(exp_vida_cont, promedio = mean(lifeExp))
+
+```
+
+
+####**Arrange**
+
+La funcion ***arrange*** nos permite ordenar o reordenar un dataframe a partir de una o mas variables, por defecto lo hace por orden ascendente.
+
+
+```{r }
+
+arrange(exp_vida_paises_nordicos, country)
+
+arrange(exp_vida_paises_nordicos, desc(country))
+
+```
+
+
+
+####**%>% Pipe** 
+
+Es un poco frustrante escribir extensas lineas de codigo donde tenemos que dar un nombre a cada data frame intermedio, incluso si el data frame en sí mismo no nos importa. Nombrar cosas es difícil y enlentece nuestro análisis.
+
+Hay otra forma de abordar el mismo problema con el pipe, ***%>%***. 
+
+
+
+
+```{r}
+salir_de_casa <- Carla %>% 
+  despierto %>% 
+  salgo_de_la_cama %>% 
+  banio %>% 
+  visto %>% 
+  desayuno %>% 
+  salgo
+```
+
+
+```{r }
+
+exp_vida_paises_nordicos <- exp_vida_pais %>% 
+  select(country,
+         year,
+         lifeExp,
+         gdpPercap) %>% 
+  filter(country %in%  c("Finland", "Denmark", "Netherlands", "Norway", "Sweden")) %>% 
+  mutate(promedio_epx = mean(lifeExp)) %>% 
+  arrange(desc(country))
+
+
+```
+
+
+##**BONUS TRACK**
+
+***Cheatsheets***
+
+Con un uds una de las mejores ayudas para seguir los paquetes de R
+
+<https://rstudio.com/resources/cheatsheets/>
+
